@@ -1,5 +1,6 @@
 let s:popup = {}
 let s:floating_window_available = has('nvim') && exists('*nvim_win_set_config')
+let g:git_messenger_popup_type = get(g:, 'git_messenger_popup_type', s:floating_window_available ? 'floating' : 'preview')
 
 function! s:popup__close() dict abort
     if !has_key(self, 'bufnr')
@@ -134,7 +135,7 @@ function! s:popup__open() dict abort
     let self.opened_at = [pos[0] + winline() - 1, pos[1] + wincol() - 1]
     let self.opener_bufnr = bufnr('%')
     let self.opener_winid = win_getid()
-    let self.type = s:floating_window_available ? 'floating' : 'preview'
+    let self.type = g:git_messenger_popup_type
 
     let [width, height] = self.window_size()
 
