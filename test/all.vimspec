@@ -565,6 +565,43 @@ Describe git-messenger.vim
                 let removed = WaitWhile(LicenseDiffExists)
                 Assert True(removed, 'Got lines: ' . string(getline(1, '$')))
             End
+
+            It switches between normal diffs and word diffs
+                GitMessenger
+                Assert IsNotNone(GetPopup())
+                GitMessenger
+                Assert Exists('b:__gitmessenger_popup')
+
+                " Check diff is not shown
+                Assert False(LicenseDiffExists(), string(getline(1, '$')))
+
+                let WordDiffMarkerExists = {-> !empty(filter(getline(1, '$'), 'v:val =~# "{+.\\++}"'))}
+
+                " none -> word diff
+                normal r
+
+                let found = WaitUntil(LicenseDiffExists)
+                let msg = 'Got lines: ' . string(getline(1, '$'))
+                Assert True(found, msg)
+                Assert True(LicenseDiffExists(), msg)
+
+                Assert WordDiffMarkerExists()
+
+                " word diff -> diff
+                normal d
+
+                let marker_removed = WaitWhile(WordDiffMarkerExists)
+                let msg = 'Got lines: ' . string(getline(1, '$'))
+                Assert True(marker_removed, msg)
+                Assert True(LicenseDiffExists(), msg)
+
+                " diff -> word diff
+                normal r
+
+                let found = WaitUntil(WordDiffMarkerExists)
+                let msg = 'Got lines: ' . string(getline(1, '$'))
+                Assert True(found, msg)
+            End
         End
 
         It preserves diff hunks after going back to older commit
@@ -626,6 +663,32 @@ Describe git-messenger.vim
                 let found = WaitUntil({-> index(getline(1, '$'), ' diff --git a/README.md b/README.md') !=# -1})
                 let msg = 'Got lines: (' . i . ') ' . string(getline(1, '$'))
                 Assert Equal(found, expected, msg)
+            endfor
+        End
+
+        It preserves word diff hunks after going back to older commit
+            GitMessenger
+            Assert IsNotNone(GetPopup())
+
+            GitMessenger
+            Assert Exists('b:__gitmessenger_popup')
+
+            normal r
+
+            let WordDiffMarkerExists = {-> !empty(filter(getline(1, '$'), 'v:val =~# "{+.\\++}"'))}
+            let found = WaitUntil(WordDiffMarkerExists)
+            Assert True(found, 'Got lines: ' . string(getline(1, '$')))
+
+            for i in range(3)
+                normal o
+                Assert WaitUntil({-> getline(2) =~# '^ History: \+#1$'})
+                Assert False(WordDiffMarkerExists(), string(getline(1, '$')))
+
+                normal O
+                Assert WaitUntil({-> getline(2) =~# '^ History: \+#0$'})
+
+                " Check diff is restored
+                Assert True(WordDiffMarkerExists(), string(getline(1, '$')))
             endfor
         End
 
